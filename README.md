@@ -66,7 +66,7 @@ Design targets measured on the maintainer setup; reproduce with `scripts/test.sh
 | **Per-Decision Verification Cost** | ~$0.015 – $0.030 | **~$0.00001** ($0.042/Mtok) | **$0.00000** (100% Free / Self-hosted) |
 | **Data Privacy** | Cloud LLM prompt logging | Ephemeral cloud evaluation | **100% Air-Gapped Local (Zero egress)** |
 | **Pre-Commit Diff Screening** | Manual / none | **Sub-second automated gate** | **Sub-second automated gate** |
-| **Local Test Suite Run** | N/A | 24/24 passed offline | 24/24 passed offline |
+| **Local Test Suite Run** | N/A | 25/25 passed offline | 25/25 passed offline |
 
 ---
 

@@ -185,6 +185,21 @@ class TransportTests(IsolatedCase):
         self.assertEqual(out, "")
         self.assertTrue(err.endswith("Invalid answer\n"), err)
 
+    def test_answer_type_must_match_command(self):
+        cases = (
+            ({"type": "score", "choice": "a", "confidence": 0.9}, ("pick", "--options", "a,b")),
+            ({"type": "score", "noul": 0.9}, ("noul",)),
+            ({"type": "noul", "score": 0.9}, ("score", "--criteria", "a,b")),
+            ({"noul": 0.9}, ("noul",)),
+        )
+        for answer, command in cases:
+            with self.subTest(answer=answer, command=command):
+                self.answer = answer
+                code, out, err = self.invoke(*command, "--question", "Q", "--state", "Synthetic")
+                self.assertEqual(code, 1)
+                self.assertEqual(out, "")
+                self.assertEqual(err, "Invalid answer\n")
+
     def test_pick_rejects_invalid_present_confidence(self):
         for confidence in ("high", -0.1, 1.1, float("nan"), float("inf"), True):
             with self.subTest(confidence=confidence):
@@ -383,8 +398,10 @@ class InstallerTests(IsolatedCase):
         self.assertTrue((self.home / ".agents/skills/jev-using-superpowers/SKILL.md").is_file())
         self.assert_no_key(result.stdout, result.stderr)
 
-    def check_typesafe_without_python(self, filename):
-        self.env.update(JEV_BACKEND="typesafe", TYPESAFE_API_KEY=TOKEN)
+    def check_typesafe_without_python(self, filename, explicit=True):
+        self.env["TYPESAFE_API_KEY"] = TOKEN
+        if explicit:
+            self.env["JEV_BACKEND"] = "typesafe"
         for name in ("python", "python3"):
             (self.bin / name).unlink()
             self.tool(name, f'printf "%s\\n" invoked >> "{self.home / "python-calls"}"; exit 73')
@@ -404,6 +421,9 @@ class InstallerTests(IsolatedCase):
     def test_bash_typesafe_installs_without_python(self):
         self.check_typesafe_without_python("install.sh")
 
+    def test_bash_implicit_typesafe_installs_without_python(self):
+        self.check_typesafe_without_python("install.sh", explicit=False)
+
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
     def test_powershell_no_key_has_no_install_side_effect(self):
         self.check_no_key("install.ps1")
@@ -415,6 +435,10 @@ class InstallerTests(IsolatedCase):
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
     def test_powershell_typesafe_installs_without_python(self):
         self.check_typesafe_without_python("install.ps1")
+
+    @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
+    def test_powershell_implicit_typesafe_installs_without_python(self):
+        self.check_typesafe_without_python("install.ps1", explicit=False)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,8 @@ if ($backend -and $backend -notin @("typesafe", "laya", "opencode-zen")) {
 }
 if (!$backend -and ($env:TYPESAFE_BASE_URL -or $env:TYPESAFE_BACKEND -eq "laya")) {
     $backend = "laya"
+} elseif (!$backend -and $env:TYPESAFE_API_KEY) {
+    $backend = "typesafe"
 }
 if ($backend -eq "typesafe" -and !$env:TYPESAFE_API_KEY) {
     Write-Error "Missing TypeSafe credential; configure TypeSafe, OpenCode Zen, or Laya"

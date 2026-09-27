@@ -135,6 +135,8 @@ def request_answer(args, config):
     field = "choice" if args.command == "pick" else args.command
     if not isinstance(answer, dict) or answer.get(field) is None:
         raise AnswerError("Missing answer")
+    if answer.get("type") != field:
+        raise AnswerError("Invalid answer")
     value = answer[field]
     if args.command == "pick":
         valid = (isinstance(value, str) and value in args.options and
