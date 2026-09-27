@@ -5,16 +5,29 @@ Write-Host "⚡ Installing jev-superpowers..." -ForegroundColor Cyan
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# Shared preflight checks credentials without HTTP or printing their values.
-# Validate before creating directories or copying any skills.
-$python = Get-Command python3 -ErrorAction SilentlyContinue
-if (!$python) { $python = Get-Command python -ErrorAction SilentlyContinue }
-if (!$python) {
-    Write-Error "Python 3 is required for System One backend configuration."
+# Validate before creating directories or copying any skills. Legacy backends need no Python.
+$backend = $env:JEV_BACKEND
+if ($backend -and $backend -notin @("typesafe", "laya", "opencode-zen")) {
+    Write-Error "Invalid JEV_BACKEND"
     exit 1
 }
-$backend = & $python.Source (Join-Path $scriptDir "scripts/jev-systemone.py") --check-backend
-if ($LASTEXITCODE -ne 0) { exit 1 }
+if (!$backend -and ($env:TYPESAFE_BASE_URL -or $env:TYPESAFE_BACKEND -eq "laya")) {
+    $backend = "laya"
+}
+if ($backend -eq "typesafe" -and !$env:TYPESAFE_API_KEY) {
+    Write-Error "Missing TypeSafe credential; configure TypeSafe, OpenCode Zen, or Laya"
+    exit 1
+}
+if (!$backend -or $backend -eq "opencode-zen") {
+    $python = Get-Command python3 -ErrorAction SilentlyContinue
+    if (!$python) { $python = Get-Command python -ErrorAction SilentlyContinue }
+    if (!$python) {
+        Write-Error "Python 3 is required for System One backend configuration."
+        exit 1
+    }
+    $backend = & $python.Source (Join-Path $scriptDir "scripts/jev-systemone.py") --check-backend
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+}
 Write-Host "✔ System One backend configured: $backend" -ForegroundColor Green
 if ($backend -eq "laya" -and !$env:TYPESAFE_API_KEY) {
     $env:TYPESAFE_API_KEY = "local"

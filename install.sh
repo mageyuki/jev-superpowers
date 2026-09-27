@@ -5,13 +5,29 @@ echo "⚡ Installing jev-superpowers..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# One shared, credential-safe resolver for both installers and the client.
-# Fail before creating directories or copying skills; this does not call HTTP.
-if ! command -v python3 >/dev/null 2>&1; then
-    echo "❌ Python 3 is required for System One backend configuration." >&2
+# Legacy backends need no Python client. Fail before creating directories or copying skills.
+case "${JEV_BACKEND:-}" in
+    typesafe|laya) BACKEND="$JEV_BACKEND" ;;
+    "")
+        if [ -n "${TYPESAFE_BASE_URL:-}" ] || [ "${TYPESAFE_BACKEND:-}" = "laya" ]; then
+            BACKEND=laya
+        else
+            BACKEND=""
+        fi ;;
+    opencode-zen) BACKEND="" ;;
+    *) echo "Invalid JEV_BACKEND" >&2; exit 1 ;;
+esac
+if [ "$BACKEND" = "typesafe" ] && [ -z "${TYPESAFE_API_KEY:-}" ]; then
+    echo "Missing TypeSafe credential; configure TypeSafe, OpenCode Zen, or Laya" >&2
     exit 1
 fi
-BACKEND="$(python3 "${SCRIPT_DIR}/scripts/jev-systemone.py" --check-backend)" || exit 1
+if [ -z "$BACKEND" ]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "❌ Python 3 is required for System One backend configuration." >&2
+        exit 1
+    fi
+    BACKEND="$(python3 "${SCRIPT_DIR}/scripts/jev-systemone.py" --check-backend)" || exit 1
+fi
 echo "✔ System One backend configured: ${BACKEND}"
 if [ "$BACKEND" = "laya" ]; then
     export TYPESAFE_API_KEY="${TYPESAFE_API_KEY:-${JEV_LOCAL_KEY:-local}}"

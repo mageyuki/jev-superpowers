@@ -106,7 +106,12 @@ def comma_tokens(value):
 
 
 def finite_number(value):
-    return type(value) in (int, float) and math.isfinite(value)
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def request_answer(args, config):
@@ -133,8 +138,8 @@ def request_answer(args, config):
     value = answer[field]
     if args.command == "pick":
         valid = (isinstance(value, str) and value in args.options and
-                 ("confidence" not in answer or
-                  (finite_number(answer["confidence"]) and 0 <= answer["confidence"] <= 1)))
+                 "confidence" in answer and finite_number(answer["confidence"]) and
+                 0 <= answer["confidence"] <= 1)
     elif args.command == "noul":
         valid = finite_number(value) and 0 <= value <= 1
     else:

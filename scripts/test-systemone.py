@@ -194,6 +194,13 @@ class TransportTests(IsolatedCase):
                 self.assertEqual(out, "")
                 self.assertTrue(err.endswith("Invalid answer\n"), err)
 
+    def test_pick_rejects_missing_confidence(self):
+        self.answer = {"type": "choice", "choice": "a"}
+        code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertEqual(err, "Invalid answer\n")
+
     def test_noul_rejects_invalid_values(self):
         for value in (-0.1, 1.1, "high", float("nan"), float("inf"), True):
             with self.subTest(value=value):
@@ -209,6 +216,13 @@ class TransportTests(IsolatedCase):
         self.assertNotEqual(code, 0)
         self.assertEqual(out, "")
         self.assertTrue(err.endswith("Invalid answer\n"), err)
+
+    def test_score_rejects_integer_too_large_for_float(self):
+        self.answer = {"type": "score", "score": 10 ** 400}
+        code, out, err = self.invoke("score", "--question", "Q", "--criteria", "a,b", "--state", "Synthetic")
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertEqual(err, "Invalid answer\n")
 
     def test_http_error_does_not_echo_secret_response(self):
         self.status = 401
@@ -369,11 +383,26 @@ class InstallerTests(IsolatedCase):
         self.assertTrue((self.home / ".agents/skills/jev-using-superpowers/SKILL.md").is_file())
         self.assert_no_key(result.stdout, result.stderr)
 
+    def check_typesafe_without_python(self, filename):
+        self.env.update(JEV_BACKEND="typesafe", TYPESAFE_API_KEY=TOKEN)
+        for name in ("python", "python3"):
+            (self.bin / name).unlink()
+            self.tool(name, f'printf "%s\\n" invoked >> "{self.home / "python-calls"}"; exit 73')
+        result = self.installer(filename)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("typesafe", result.stdout.lower())
+        self.assertTrue((self.home / ".agents/skills/jev-using-superpowers/SKILL.md").is_file())
+        self.assertFalse((self.home / "python-calls").exists(), "Legacy installation must not invoke Python")
+        self.assert_no_key(result.stdout, result.stderr)
+
     def test_bash_no_key_has_no_install_side_effect(self):
         self.check_no_key("install.sh")
 
     def test_bash_zen_configures_without_second_key(self):
         self.check_zen("install.sh")
+
+    def test_bash_typesafe_installs_without_python(self):
+        self.check_typesafe_without_python("install.sh")
 
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
     def test_powershell_no_key_has_no_install_side_effect(self):
@@ -382,6 +411,10 @@ class InstallerTests(IsolatedCase):
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
     def test_powershell_zen_configures_without_second_key(self):
         self.check_zen("install.ps1")
+
+    @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
+    def test_powershell_typesafe_installs_without_python(self):
+        self.check_typesafe_without_python("install.ps1")
 
 
 if __name__ == "__main__":
