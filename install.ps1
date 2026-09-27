@@ -39,7 +39,7 @@ Write-Host "✔ System One backend configured: $backend" -ForegroundColor Green
 if ($backend -eq "laya" -and !$env:TYPESAFE_API_KEY) {
     $env:TYPESAFE_API_KEY = "local"
 } elseif ($backend -eq "opencode-zen") {
-    Write-Host "  Typed decisions: python3 $scriptDir/scripts/jev-systemone.py"
+    Write-Host "  Typed decisions: $($python.Source) $scriptDir/scripts/jev-systemone.py"
     Write-Host "  Zen does not replace jev-scout registry searches or git jev check."
 }
 

@@ -149,7 +149,10 @@ def request_answer(args, config):
     if not valid:
         raise AnswerError("Invalid answer")
     # Keep all raw fields (especially score vs confidence); never map confidence.
-    output = json.dumps(answer, ensure_ascii=False)
+    try:
+        output = json.dumps(answer, ensure_ascii=False, allow_nan=False)
+    except ValueError as error:
+        raise AnswerError("Invalid answer") from error
     if len(key) >= 16 and key != "local" and (key in output or json.dumps(key, ensure_ascii=False)[1:-1] in output):
         raise AnswerError("Unsafe answer")
     return output

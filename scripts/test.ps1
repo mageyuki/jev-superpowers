@@ -116,7 +116,16 @@ env -u OPENCODE_API_KEY -u JEV_BACKEND -u TYPESAFE_BASE_URL -u TYPESAFE_BACKEND 
     return $true
 }
 
-# 15-20. Every jev skill documents failure modes
+# 15. Run the same System One contracts as test.sh when Python is available
+Run-Check -Description 'System One client and installer contracts' -Condition {
+    $pythonCommand = Get-Command python3 -ErrorAction SilentlyContinue
+    if (!$pythonCommand) { $pythonCommand = Get-Command python -ErrorAction SilentlyContinue }
+    if (!$pythonCommand) { return $true }
+    & $pythonCommand.Source (Join-Path $scriptsDir 'test-systemone.py') -q
+    return ($LASTEXITCODE -eq 0)
+}
+
+# Every jev skill documents failure modes
 foreach ($skill in $jevSkills) {
     $skillFile = Join-Path $skillsDir "$skill\SKILL.md"
     $desc = "$skill documents failure modes"

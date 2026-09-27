@@ -234,6 +234,14 @@ class TransportTests(IsolatedCase):
                 self.assertEqual(out, "")
                 self.assertTrue(err.endswith("Invalid answer\n"), err)
 
+    def test_pick_rejects_nonfinite_probabilities_without_output(self):
+        for probability in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(probability=probability):
+                self.answer = {"type": "choice", "choice": "a", "confidence": 0.9,
+                               "probabilities": {"a": probability}}
+                code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
+                self.assertEqual((code, out, err), (1, "", "Invalid answer\n"))
+
     def test_pick_rejects_missing_confidence(self):
         self.answer = {"type": "choice", "choice": "a"}
         code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
@@ -489,6 +497,11 @@ class InstallerTests(IsolatedCase):
             r"\$python = Get-Command python3 -ErrorAction SilentlyContinue\s+"
             r"if \(!\$python\) \{ \$python = Get-Command python -ErrorAction SilentlyContinue \}",
         )
+
+    def test_powershell_suite_runs_systemone_contracts_when_python_exists(self):
+        source = (ROOT / "scripts/test.ps1").read_text()
+        self.assertRegex(source, r"Run-Check[^\n]*System One client and installer contracts")
+        self.assertRegex(source, r"(?s)Get-Command python3.*Get-Command python.*test-systemone\.py")
 
 
 class LayaServerTests(unittest.TestCase):
