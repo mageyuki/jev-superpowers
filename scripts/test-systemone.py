@@ -178,6 +178,38 @@ class TransportTests(IsolatedCase):
         self.assertEqual(question["type"], "score")
         self.assertEqual(question["criteria"], {"0": "Unclear", "1": "Reasonable", "2": "Clear"})
 
+    def test_pick_rejects_choice_outside_requested_options(self):
+        self.answer = {"type": "choice", "choice": "unrequested", "confidence": 0.98}
+        code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
+        self.assertNotEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertTrue(err.endswith("Invalid answer\n"), err)
+
+    def test_pick_rejects_invalid_present_confidence(self):
+        for confidence in ("high", -0.1, 1.1, float("nan"), float("inf"), True):
+            with self.subTest(confidence=confidence):
+                self.answer = {"type": "choice", "choice": "a", "confidence": confidence}
+                code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
+                self.assertNotEqual(code, 0)
+                self.assertEqual(out, "")
+                self.assertTrue(err.endswith("Invalid answer\n"), err)
+
+    def test_noul_rejects_invalid_values(self):
+        for value in (-0.1, 1.1, "high", float("nan"), float("inf"), True):
+            with self.subTest(value=value):
+                self.answer = {"type": "noul", "noul": value}
+                code, out, err = self.invoke("noul", "--question", "Q", "--state", "Synthetic")
+                self.assertNotEqual(code, 0)
+                self.assertEqual(out, "")
+                self.assertTrue(err.endswith("Invalid answer\n"), err)
+
+    def test_score_rejects_nonfinite_value(self):
+        self.answer = {"type": "score", "score": float("inf"), "confidence": 0.09}
+        code, out, err = self.invoke("score", "--question", "Q", "--criteria", "a,b", "--state", "Synthetic")
+        self.assertNotEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertTrue(err.endswith("Invalid answer\n"), err)
+
     def test_http_error_does_not_echo_secret_response(self):
         self.status = 401
         self.answer = {"error": TOKEN}
@@ -264,6 +296,9 @@ class SelectionTests(IsolatedCase):
             ({"OPENCODE_API_KEY": TOKEN, "TYPESAFE_API_KEY": "synthetic"}, "opencode-zen"),
             ({"OPENCODE_API_KEY": TOKEN, "TYPESAFE_API_KEY": "synthetic", "JEV_BACKEND": "typesafe"}, "typesafe"),
             ({"OPENCODE_API_KEY": TOKEN, "JEV_BACKEND": "laya"}, "laya"),
+            ({"OPENCODE_API_KEY": TOKEN, "TYPESAFE_BASE_URL": "http://127.0.0.1:8000"}, "laya"),
+            ({"OPENCODE_API_KEY": TOKEN, "TYPESAFE_BACKEND": "laya"}, "laya"),
+            ({"OPENCODE_API_KEY": TOKEN, "TYPESAFE_BASE_URL": "http://127.0.0.1:8000", "JEV_BACKEND": "opencode-zen"}, "opencode-zen"),
             ({"TYPESAFE_API_KEY": "synthetic"}, "typesafe"),
             ({"TYPESAFE_BASE_URL": "http://127.0.0.1:8000"}, "laya"),
             ({"TYPESAFE_BACKEND": "laya"}, "laya"),

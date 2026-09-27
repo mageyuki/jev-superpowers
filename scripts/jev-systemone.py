@@ -2,6 +2,7 @@
 """Typed System One decisions, using only the Python standard library."""
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import sqlite3
@@ -72,15 +73,15 @@ def backend_config():
     backend = os.environ.get("JEV_BACKEND", "").strip()
     if backend and backend not in ("opencode-zen", "typesafe", "laya"):
         raise ConfigurationError("Invalid JEV_BACKEND")
-    key = opencode_key() if backend in ("", "opencode-zen") else None
+    key = None
     if not backend:
-        if key:
-            backend = "opencode-zen"
-        elif os.environ.get("TYPESAFE_BASE_URL") or os.environ.get("TYPESAFE_BACKEND") == "laya":
+        if os.environ.get("TYPESAFE_BASE_URL") or os.environ.get("TYPESAFE_BACKEND") == "laya":
             backend = "laya"
         else:
-            backend = "typesafe"
+            key = opencode_key()
+            backend = "opencode-zen" if key else "typesafe"
     if backend == "opencode-zen":
+        key = key or opencode_key()
         if not key:
             raise ConfigurationError("Missing OpenCode Zen credential")
         return backend, key, "https://opencode.ai/zen/v1/systemone", os.environ.get("JEV_MODEL") or "jev-1.13-free"
@@ -104,6 +105,10 @@ def comma_tokens(value):
     return tokens
 
 
+def finite_number(value):
+    return type(value) in (int, float) and math.isfinite(value)
+
+
 def request_answer(args, config):
     _, key, endpoint, model = config
     question = {"type": "choice" if args.command == "pick" else args.command,
@@ -125,6 +130,17 @@ def request_answer(args, config):
     field = "choice" if args.command == "pick" else args.command
     if not isinstance(answer, dict) or answer.get(field) is None:
         raise AnswerError("Missing answer")
+    value = answer[field]
+    if args.command == "pick":
+        valid = (isinstance(value, str) and value in args.options and
+                 ("confidence" not in answer or
+                  (finite_number(answer["confidence"]) and 0 <= answer["confidence"] <= 1)))
+    elif args.command == "noul":
+        valid = finite_number(value) and 0 <= value <= 1
+    else:
+        valid = finite_number(value)
+    if not valid:
+        raise AnswerError("Invalid answer")
     # Keep all raw fields (especially score vs confidence); never map confidence.
     output = json.dumps(answer, ensure_ascii=False)
     if key in output or json.dumps(key, ensure_ascii=False)[1:-1] in output:

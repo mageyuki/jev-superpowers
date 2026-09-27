@@ -146,8 +146,10 @@ python3 scripts/jev-systemone.py pick --question "Which backend is connected?" \
 
 Zen resolves `OPENCODE_API_KEY` or the stored OpenCode Console credential without
 printing it or requesting a second TypeSafe key. It defaults to `jev-1.13-free`
-(`JEV_MODEL` overrides). Explicit `JEV_BACKEND` wins; otherwise Zen is selected
-when its credential resolves, then the existing TypeSafe/Laya rules apply.
+(`JEV_MODEL` overrides). Explicit `JEV_BACKEND` wins; otherwise
+`TYPESAFE_BASE_URL` or `TYPESAFE_BACKEND=laya` selects local Laya before Zen
+credential resolution. Without either local setting, a resolved Console key
+selects Zen; otherwise the TypeSafe default applies.
 Zen supplies typed decisions only, **not** `jev-scout` registry searches or
 `git jev check`. Keep this checkout for the client. See the
 [OpenCode Zen guide](docs/OPENCODE_ZEN.md) for commands, credential paths, and limits.

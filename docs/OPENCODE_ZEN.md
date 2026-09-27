@@ -22,9 +22,10 @@ project, use the absolute path to `scripts/jev-systemone.py`.
 ## Selection and credentials
 
 1. Explicit `JEV_BACKEND` wins: `opencode-zen`, `typesafe`, or `laya`.
-2. Otherwise, a resolvable OpenCode Console credential selects Zen.
-3. Otherwise, `TYPESAFE_BASE_URL` or `TYPESAFE_BACKEND=laya` selects the existing
-   local path; the remaining default is TypeSafe with `TYPESAFE_API_KEY`.
+2. Otherwise, `TYPESAFE_BASE_URL` or `TYPESAFE_BACKEND=laya` selects the existing
+   local path without consulting the Console credential.
+3. Otherwise, a resolvable OpenCode Console credential selects Zen.
+4. Otherwise, the default is TypeSafe with `TYPESAFE_API_KEY`.
 
 Zen uses a non-empty `OPENCODE_API_KEY` first. Otherwise it reads, **read-only**,
 the `key` field from the SQLite `credential.value` JSON for
@@ -67,8 +68,8 @@ nonzero; errors omit server bodies and credentials. Sanitize state before cloud 
 Zen covers **typed decisions only**. It does not replace `jev-scout` registry
 searches, `git jev check`, or configure external guard/verification tools. Those
 tools keep their own requirements. TypeSafe and [local Laya](FOSS_LAYA.md) remain
-available; explicitly select `JEV_BACKEND=laya` to keep decisions local even when
-Console is connected.
+available; `TYPESAFE_BASE_URL`, `TYPESAFE_BACKEND=laya`, or explicit
+`JEV_BACKEND=laya` keeps decisions local even when Console is connected.
 
 Run `bash scripts/test.sh`. Its installer negative check and Python contract tests
 use temporary homes and isolated credential stores; they never rely on your real

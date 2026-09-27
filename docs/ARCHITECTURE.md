@@ -96,15 +96,17 @@ jev-brainstorming / jev-systematic-debugging
                      |
         python3 scripts/jev-systemone.py
                      |
-  explicit JEV_BACKEND > resolved Console key > TypeSafe/Laya rules
-          /                  |                   \
-   opencode-zen           typesafe               laya
-   opencode.ai/zen/v1      api.typesafe.ai/v1      local /v1
-   POST /systemone        POST /systemone        POST /systemone
-   jev-1.13-free           existing TypeSafe      existing local bridge
-   Console Bearer key     TYPESAFE_API_KEY       local key
-   non-empty User-Agent
 ```
+
+Backend selection order:
+
+1. Explicit `JEV_BACKEND` selects `opencode-zen`, `typesafe`, or `laya`.
+2. Otherwise `TYPESAFE_BASE_URL` or `TYPESAFE_BACKEND=laya` selects local Laya,
+   without consulting the Console credential.
+3. Otherwise a resolved Console credential selects OpenCode Zen
+   (`opencode.ai/zen/v1/systemone`, `jev-1.13-free`, Bearer key, non-empty User-Agent).
+4. Otherwise TypeSafe is the default (`api.typesafe.ai/v1/systemone` with
+   `TYPESAFE_API_KEY`). Laya uses the local `/v1/systemone` bridge and local key.
 
 Zen credential resolution is env first, then read-only OpenCode SQLite; both
 installers share the client's non-network preflight before copying skills.
