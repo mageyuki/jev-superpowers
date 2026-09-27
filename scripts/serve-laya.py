@@ -224,6 +224,8 @@ class SystemOneHandler(BaseHTTPRequestHandler):
                 answers[q_name] = evaluate_noul(state_str, q_body)
             else:
                 answers[q_name] = evaluate_choice(state_str, q_body)
+                q_type = "choice"
+            answers[q_name]["type"] = q_type
 
         response_payload = {
             "answers": answers,

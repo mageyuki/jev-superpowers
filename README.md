@@ -66,7 +66,7 @@ Design targets measured on the maintainer setup; reproduce with `scripts/test.sh
 | **Per-Decision Verification Cost** | ~$0.015 – $0.030 | **~$0.00001** ($0.042/Mtok) | **$0.00000** (100% Free / Self-hosted) |
 | **Data Privacy** | Cloud LLM prompt logging | Ephemeral cloud evaluation | **100% Air-Gapped Local (Zero egress)** |
 | **Pre-Commit Diff Screening** | Manual / none | **Sub-second automated gate** | **Sub-second automated gate** |
-| **Local Test Suite Run** | N/A | 24/24 passed offline | 24/24 passed offline |
+| **Local Test Suite Run** | N/A | 25/25 passed offline | 25/25 passed offline |
 
 ---
 
@@ -97,10 +97,10 @@ For complete local setup instructions, see the **[100% Local FOSS Engine Guide (
 
 | Skill | Phase | Standard Superpower | `jev-superpowers` Upgrade |
 |---|---|---|---|
-| **`jev-brainstorming`** | Ideation | `brainstorming` | `jev-axi pick` trade-off convergence with calibrated confidence ($>0.80$) |
+| **`jev-brainstorming`** | Ideation | `brainstorming` | OpenCode Zen: `python3 scripts/jev-systemone.py pick`; TypeSafe/Laya only: `jev-axi pick` trade-off convergence with calibrated confidence ($>0.80$) |
 | **`jev-writing-plans`** | Planning | `writing-plans` | `jev-scout` zero-hallucination crate & repository verification |
 | **`jev-executing-plans`** | Execution | `executing-plans` | `jev-guard` command safety + `git-jev` pre-commit reflex gate |
-| **`jev-systematic-debugging`** | Triage | `systematic-debugging` | `jev-axi triage` error analysis + Jev `Score` hypothesis ranking |
+| **`jev-systematic-debugging`** | Triage | `systematic-debugging` | OpenCode Zen: `python3 scripts/jev-systemone.py` typed decisions; TypeSafe/Laya only: `jev-axi triage` error analysis + Jev `Score` hypothesis ranking |
 | **`jev-verification`** | Completion | `verification-before-completion` | `limpet` turn stop-hook + `supercov quality` anti-pattern scoring |
 
 ---
@@ -133,11 +133,33 @@ cd jev-superpowers
 
 ### Step 2: Choose Decision Backend
 
+#### OpenCode Zen: reuse your connected Console key
+
+With Python 3 installed, run from this checkout:
+
+```bash
+export JEV_BACKEND=opencode-zen
+bash install.sh
+python3 scripts/jev-systemone.py pick --question "Which backend is connected?" \
+  --options "opencode-zen,typesafe,laya" --state "OpenCode Console is connected."
+```
+
+Zen resolves `OPENCODE_API_KEY` or the stored OpenCode Console credential without
+printing it or requesting a second TypeSafe key. It defaults to `jev-1.13-free`
+(`JEV_MODEL` overrides). Explicit `JEV_BACKEND` wins; otherwise
+`TYPESAFE_BASE_URL` or `TYPESAFE_BACKEND=laya` selects local Laya before Zen
+credential resolution. Without either local setting, a resolved Console key
+selects Zen; otherwise the TypeSafe default applies.
+Zen supplies typed decisions only, **not** `jev-scout` registry searches or
+`git jev check`. Keep this checkout for the client. See the
+[OpenCode Zen guide](docs/OPENCODE_ZEN.md) for commands, credential paths, and limits.
+
 #### Option A: Cloud Backend (TypeSafe AI)
 
 ```bash
 # 1. Export your free API key from https://console.typesafe.ai
 export TYPESAFE_API_KEY="your_api_key"
+export JEV_BACKEND=typesafe
 
 # 2. Run cross-platform installer
 bash install.sh
@@ -155,6 +177,7 @@ python scripts/serve-laya.py --port 8000 &
 # 3. Export local routing (Zero cloud tokens, 100% air-gapped)
 export TYPESAFE_BASE_URL="http://127.0.0.1:8000"
 export TYPESAFE_API_KEY="local"
+export JEV_BACKEND=laya
 
 # 4. Run installer
 bash install.sh
@@ -192,6 +215,7 @@ Run the offline test suite (`bash scripts/test.sh` or `pwsh scripts/test.ps1`):
   ✔ pre-commit ignores plain ls
   ✔ session-start injects Jev router
   ✔ installer fails without key
+  ✔ System One client and installer contracts
   ✔ jev-using-superpowers documents failure modes
   ✔ jev-brainstorming documents failure modes
   ✔ jev-writing-plans documents failure modes
@@ -203,7 +227,7 @@ Run the offline test suite (`bash scripts/test.sh` or `pwsh scripts/test.ps1`):
   ✔ serve-laya syntax valid
   ✔ README avoids absolute claims
 
-Test results: 24 passed, 0 failed.
+Test results: 25 passed, 0 failed.
 ```
 
 ---

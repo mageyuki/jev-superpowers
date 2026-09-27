@@ -1,6 +1,6 @@
 ---
 name: jev-brainstorming
-description: Use before any creative architecture, feature design, or stack selection - explores requirements, generates 2-3 approaches, and uses TypeSafe Jev (jev-axi pick) to converge on the optimal technical decision
+description: Use before any creative architecture, feature design, or stack selection - explores requirements, generates 2-3 approaches, and uses OpenCode Zen (python3 scripts/jev-systemone.py pick) or TypeSafe/Laya only (jev-axi pick) to converge on the technical decision
 ---
 
 # Jev Brainstorming: Systematic Design with Typed Convergence
@@ -20,7 +20,8 @@ Inherits all requirements exploration and collaborative dialogue rules from `sup
 - Present 2-3 viable technical approaches with honest pros and cons.
 
 ### 3. Jev Convergence Gate (MANDATORY)
-Before recommending an approach or asking the user to decide, run `jev-axi pick` to evaluate the architectural decision deterministically:
+Before recommending an approach or asking the user to decide, resolve the backend
+using `jev-using-superpowers`. For TypeSafe/Laya, run `jev-axi pick`:
 
 ```bash
 jev-axi pick "<Tradeoff Question>" \
@@ -28,11 +29,26 @@ jev-axi pick "<Tradeoff Question>" \
   --text "<Context, constraints, user persona, latency & memory targets>"
 ```
 
+For **OpenCode Zen**, run the in-repo client instead, from the retained checkout
+(or use its absolute script path):
+
+```bash
+python3 scripts/jev-systemone.py pick --question "<Tradeoff Question>" \
+  --options "<opt1>,<opt2>,<opt3>" \
+  --state "<Context, constraints, user persona, latency & memory targets>"
+```
+
+Option tokens are the choice IDs. Zen returns live `choice`, `confidence`, and
+`probabilities`; report these unchanged, not a guessed or remapped confidence.
+Missing credential, HTTP failure, or missing answer: STOP, with no silent fallback.
+Zen replaces only this typed decision, not registry search or `git jev check`.
+
 **Evaluation Rules:**
 1. **Report Live Jev Output**: State the picked option, its probability distribution, and calibrated confidence score.
 2. **Confidence Threshold**:
    - `Confidence >= 0.80` (Band: `act`): Present as the strongly recommended choice.
-   - `Confidence < 0.80` (Band: `confirm`/`escalate`): Explain why the tradeoff is close and explicitly ask the human partner to break the tie.
+   - `0.50 <= Confidence < 0.80` (Band: `confirm`): Explain why the tradeoff is close and explicitly ask the human partner to break the tie.
+   - `Confidence < 0.50` (Band: `stop`): Gather requirements; do not recommend action. These are the existing bands in `docs/CONFIDENCE.md`.
 3. **Ponytail Check**: If one option is standard library or already-installed dependency, bias the context toward Rung 3/5.
 
 ### 4. Human Approval Gate
