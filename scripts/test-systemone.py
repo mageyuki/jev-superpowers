@@ -481,6 +481,15 @@ class InstallerTests(IsolatedCase):
     def test_powershell_implicit_backend_uses_python_preflight(self):
         self.check_python_preflight_precedes_implicit_typesafe("install.ps1")
 
+    def test_powershell_implicit_preflight_falls_back_to_python(self):
+        source = (ROOT / "install.ps1").read_text()
+        implicit_branch = source.split("} elseif (!$backend) {", 1)[1].split("\n}", 1)[0]
+        self.assertRegex(
+            implicit_branch,
+            r"\$python = Get-Command python3 -ErrorAction SilentlyContinue\s+"
+            r"if \(!\$python\) \{ \$python = Get-Command python -ErrorAction SilentlyContinue \}",
+        )
+
 
 class LayaServerTests(unittest.TestCase):
     def test_server_emits_answer_type(self):

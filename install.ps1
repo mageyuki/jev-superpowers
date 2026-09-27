@@ -16,6 +16,7 @@ if (!$backend -and ($env:TYPESAFE_BASE_URL -or $env:TYPESAFE_BACKEND -eq "laya")
     $backend = "laya"
 } elseif (!$backend) {
     $python = Get-Command python3 -ErrorAction SilentlyContinue
+    if (!$python) { $python = Get-Command python -ErrorAction SilentlyContinue }
     if (!$python -and $env:TYPESAFE_API_KEY) { $backend = "typesafe" }
 }
 if ($backend -eq "typesafe" -and !$env:TYPESAFE_API_KEY) {
