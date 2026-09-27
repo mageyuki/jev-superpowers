@@ -79,6 +79,7 @@ class TransportTests(IsolatedCase):
         self.answer = {"type": "noul", "noul": 0.72}
         self.status = 200
         self.missing = False
+        self.redirect_to = None
         self.received = []
         owner = self
 
@@ -89,6 +90,11 @@ class TransportTests(IsolatedCase):
             def do_POST(self):
                 payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 owner.received.append((self.path, dict(self.headers), payload))
+                if owner.redirect_to:
+                    self.send_response(302)
+                    self.send_header("Location", owner.redirect_to)
+                    self.end_headers()
+                    return
                 question_id = next(iter(payload["questions"]))
                 body = {"model": payload["model"], "answers": {} if owner.missing else {
                     question_id: owner.answer,
@@ -114,7 +120,8 @@ class TransportTests(IsolatedCase):
 
         def loopback(opener, request, *pos, **kwargs):
             self.urls.append(request.full_url)
-            request.full_url = f"http://127.0.0.1:{self.server.server_port}/zen/v1/systemone"
+            if request.full_url == "https://opencode.ai/zen/v1/systemone":
+                request.full_url = f"http://127.0.0.1:{self.server.server_port}/zen/v1/systemone"
             return original_open(opener, request, *pos, **kwargs)
 
         out, err = io.StringIO(), io.StringIO()
@@ -136,7 +143,7 @@ class TransportTests(IsolatedCase):
         self.assertEqual(self.urls, ["https://opencode.ai/zen/v1/systemone"])
         _, headers, body = self.received[0]
         self.assertEqual(headers["Authorization"], "Bearer " + TOKEN)
-        self.assertTrue(headers.get("User-Agent", "").strip())
+        self.assertEqual(headers["User-Agent"], "opencode/jev-superpowers")
         self.assertEqual(headers["Content-Type"], "application/json")
         self.assertEqual(body["model"], "jev-1.13-free")
         self.assertEqual(body["state"], "Synthetic input")
@@ -178,6 +185,41 @@ class TransportTests(IsolatedCase):
         self.assertNotEqual(code, 0)
         self.assertEqual(out, "")
         self.assertIn("HTTP", err)
+
+    def test_redirect_refusal_raises_and_never_contacts_destination(self):
+        received_at_destination = []
+
+        class Destination(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                received_at_destination.append(dict(self.headers))
+                self.send_response(200)
+                self.end_headers()
+
+            do_POST = do_GET
+
+        destination = HTTPServer(("127.0.0.1", 0), Destination)
+        thread = threading.Thread(target=destination.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(thread.join)
+        self.addCleanup(destination.server_close)
+        self.addCleanup(destination.shutdown)
+        self.redirect_to = f"http://127.0.0.1:{destination.server_port}/destination"
+
+        code, out, err = self.invoke("noul", "--question", "Q", "--state", "Synthetic")
+        self.assertNotEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertIn("HTTP", err)
+        self.assertEqual(len(self.received), 1)
+        self.assertEqual(received_at_destination, [])
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            self.client.NoRedirect().redirect_request(
+                urllib.request.Request("https://opencode.ai/zen/v1/systemone"),
+                None, 302, "Found", {"Location": self.redirect_to}, self.redirect_to,
+            )
+        self.assertEqual(raised.exception.code, 302)
 
     def test_missing_answer_fails(self):
         self.missing = True

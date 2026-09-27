@@ -1,6 +1,6 @@
 ---
 name: jev-systematic-debugging
-description: Use when encountering any bug, test failure, or build error - enforces root-cause investigation using jev-axi triage for build errors and Jev Score for hypothesis ranking
+description: Use when encountering any bug, test failure, or build error - enforces root-cause investigation using OpenCode Zen (python3 scripts/jev-systemone.py) for typed decisions or TypeSafe/Laya only (jev-axi triage) for build errors and Jev Score for hypothesis ranking
 ---
 
 # Jev Systematic Debugging: Root-Cause Investigation with Jev Triage

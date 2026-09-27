@@ -22,7 +22,7 @@ class AnswerError(Exception):
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     # Never forward the bearer credential to a redirect destination.
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
+        raise urllib.error.HTTPError(req.full_url, code, "Redirect refused", headers, fp)
 
 
 def opencode_db_path():

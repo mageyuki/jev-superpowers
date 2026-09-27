@@ -97,10 +97,10 @@ For complete local setup instructions, see the **[100% Local FOSS Engine Guide (
 
 | Skill | Phase | Standard Superpower | `jev-superpowers` Upgrade |
 |---|---|---|---|
-| **`jev-brainstorming`** | Ideation | `brainstorming` | `jev-axi pick` trade-off convergence with calibrated confidence ($>0.80$) |
+| **`jev-brainstorming`** | Ideation | `brainstorming` | OpenCode Zen: `python3 scripts/jev-systemone.py pick`; TypeSafe/Laya only: `jev-axi pick` trade-off convergence with calibrated confidence ($>0.80$) |
 | **`jev-writing-plans`** | Planning | `writing-plans` | `jev-scout` zero-hallucination crate & repository verification |
 | **`jev-executing-plans`** | Execution | `executing-plans` | `jev-guard` command safety + `git-jev` pre-commit reflex gate |
-| **`jev-systematic-debugging`** | Triage | `systematic-debugging` | `jev-axi triage` error analysis + Jev `Score` hypothesis ranking |
+| **`jev-systematic-debugging`** | Triage | `systematic-debugging` | OpenCode Zen: `python3 scripts/jev-systemone.py` typed decisions; TypeSafe/Laya only: `jev-axi triage` error analysis + Jev `Score` hypothesis ranking |
 | **`jev-verification`** | Completion | `verification-before-completion` | `limpet` turn stop-hook + `supercov quality` anti-pattern scoring |
 
 ---

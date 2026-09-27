@@ -16,10 +16,10 @@ YOU MUST INVOKE THE CORRESPONDING JEV-SUPERPOWER.
 
 | Phase | Standard Superpower | Jev-Superpower | Core Jev Enhancement |
 |---|---|---|---|
-| **Ideation / Architecture** | `brainstorming` | `jev-brainstorming` | `jev-axi pick` trade-off convergence with calibrated confidence ($>0.80$) |
+| **Ideation / Architecture** | `brainstorming` | `jev-brainstorming` | OpenCode Zen: `python3 scripts/jev-systemone.py pick`; TypeSafe/Laya only: `jev-axi pick` trade-off convergence with calibrated confidence ($>0.80$) |
 | **Implementation Plan** | `writing-plans` | `jev-writing-plans` | `jev-scout` zero-hallucination crate & repository verification |
 | **Execution Loop** | `executing-plans` | `jev-executing-plans` | `jev-guard` command safety + `git-jev` pre-commit reflex gate |
-| **Root-Cause Debugging** | `systematic-debugging` | `jev-systematic-debugging` | `jev-axi triage` error analysis + Jev `Score` hypothesis ranking |
+| **Root-Cause Debugging** | `systematic-debugging` | `jev-systematic-debugging` | OpenCode Zen: `python3 scripts/jev-systemone.py` typed decisions; TypeSafe/Laya only: `jev-axi triage` error analysis + Jev `Score` hypothesis ranking |
 | **Completion Gate** | `verification-before-completion` | `jev-verification` | `limpet` turn stop-hook + `supercov quality` anti-pattern scoring |
 
 ## Prerequisites

@@ -1,6 +1,6 @@
 ---
 name: jev-brainstorming
-description: Use before any creative architecture, feature design, or stack selection - explores requirements, generates 2-3 approaches, and uses TypeSafe Jev (jev-axi pick) to converge on the optimal technical decision
+description: Use before any creative architecture, feature design, or stack selection - explores requirements, generates 2-3 approaches, and uses OpenCode Zen (python3 scripts/jev-systemone.py pick) or TypeSafe/Laya only (jev-axi pick) to converge on the technical decision
 ---
 
 # Jev Brainstorming: Systematic Design with Typed Convergence
