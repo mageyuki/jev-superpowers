@@ -27,6 +27,8 @@ TOKEN = "synthetic-console-key-not-a-secret"
 
 class IsolatedCase(unittest.TestCase):
     def setUp(self):
+        if os.name == "nt":
+            self.skipTest("POSIX symlink and shell fixtures unavailable on Windows")
         self.temp = tempfile.TemporaryDirectory(prefix=".jev-test-", dir=ROOT)
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name)
@@ -56,7 +58,7 @@ class IsolatedCase(unittest.TestCase):
             with db:
                 db.execute("CREATE TABLE credential (integration_id TEXT, value TEXT)")
                 db.execute("INSERT INTO credential VALUES (?, ?)", (
-                    integration, value if value is not None else json.dumps({"type": "api", "key": key}),
+                    integration, value if value is not None else json.dumps({"type": "key", "key": key}),
                 ))
         return path
 
@@ -242,6 +244,17 @@ class TransportTests(IsolatedCase):
                 code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
                 self.assertEqual((code, out, err), (1, "", "Invalid answer\n"))
 
+    def test_pick_and_score_reject_invalid_present_probabilities(self):
+        for command, field, options in (("pick", "choice", ("--options", "a,b")),
+                                        ("score", "score", ("--criteria", "a,b"))):
+            for probabilities in ({"a": "0.5"}, {"a": -0.1}, {"a": 1.1}, [0.5]):
+                with self.subTest(command=command, probabilities=probabilities):
+                    self.answer = {"type": "choice" if command == "pick" else "score",
+                                   field: "a" if command == "pick" else 0.5,
+                                   "confidence": 0.9, "probabilities": probabilities}
+                    code, out, err = self.invoke(command, "--question", "Q", *options, "--state", "Synthetic")
+                    self.assertEqual((code, out, err), (1, "", "Invalid answer\n"))
+
     def test_pick_rejects_missing_confidence(self):
         self.answer = {"type": "choice", "choice": "a"}
         code, out, err = self.invoke("pick", "--question", "Choose", "--options", "a,b", "--state", "Synthetic")
@@ -343,6 +356,16 @@ class TransportTests(IsolatedCase):
         self.assertEqual(self.received[0][1]["Authorization"], "Bearer " + TOKEN)
         self.assertEqual(path.read_bytes(), before)
 
+    def test_stored_oauth_access_is_used_when_key_is_empty(self):
+        del self.env["OPENCODE_API_KEY"]
+        path = self.store(value=json.dumps({"type": "oauth", "key": "", "access": TOKEN,
+                                            "refresh": "synthetic-refresh-do-not-use"}))
+        before = path.read_bytes()
+        code, _, err = self.invoke("noul", "--question", "Q", "--state", "S")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.received[0][1]["Authorization"], "Bearer " + TOKEN)
+        self.assertEqual(path.read_bytes(), before)
+
 
 class SelectionTests(IsolatedCase):
     def test_no_key_fails_and_does_not_create_database(self):
@@ -380,7 +403,8 @@ class SelectionTests(IsolatedCase):
         self.assertIn("credential", result.stderr.lower())
 
     def test_invalid_store_is_not_a_credential(self):
-        for value in ("bad-json", '{"type":"api","key":""}', '{"type":"oauth"}'):
+        for value in ("bad-json", '{"type":"api","key":"nonempty-synthetic"}',
+                      '{"type":"key","key":""}', '{"type":"oauth"}'):
             with self.subTest(value=value):
                 path = self.store(value=value)
                 try:
@@ -489,6 +513,8 @@ class InstallerTests(IsolatedCase):
     def test_powershell_implicit_backend_uses_python_preflight(self):
         self.check_python_preflight_precedes_implicit_typesafe("install.ps1")
 
+
+class PowerShellSourceTests(unittest.TestCase):
     def test_powershell_implicit_preflight_falls_back_to_python(self):
         source = (ROOT / "install.ps1").read_text()
         implicit_branch = source.split("} elseif (!$backend) {", 1)[1].split("\n}", 1)[0]

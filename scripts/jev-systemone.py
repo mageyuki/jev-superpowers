@@ -60,10 +60,14 @@ def opencode_key():
                     credential = json.loads(value)
                 except (ValueError, TypeError):
                     continue
-                if isinstance(credential, dict):
+                if isinstance(credential, dict) and credential.get("type") in ("key", "oauth"):
                     key = credential.get("key")
                     if isinstance(key, str) and key.strip():
                         return key.strip()
+                    if credential["type"] == "oauth":
+                        access = credential.get("access")
+                        if isinstance(access, str) and access.strip():
+                            return access.strip()
     except (OSError, ValueError, sqlite3.Error):
         pass
     return None
@@ -148,6 +152,13 @@ def request_answer(args, config):
         valid = finite_number(value)
     if not valid:
         raise AnswerError("Invalid answer")
+    if args.command in ("pick", "score") and "probabilities" in answer:
+        probabilities = answer["probabilities"]
+        if not isinstance(probabilities, dict) or not all(
+            finite_number(probability) and 0 <= probability <= 1
+            for probability in probabilities.values()
+        ):
+            raise AnswerError("Invalid answer")
     # Keep all raw fields (especially score vs confidence); never map confidence.
     try:
         output = json.dumps(answer, ensure_ascii=False, allow_nan=False)
