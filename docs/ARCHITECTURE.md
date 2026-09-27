@@ -89,6 +89,8 @@ of external utilities, registry search (`jev-scout`), or `git jev check`.
       • Auth: TYPESAFE_API_KEY                    • Auth: Dummy / Keyless
 ```
 
+This diagram is the external-utility pair only (`git-jev`, `limpet`, and the other PATH tools). It is not the in-repo client. OpenCode Zen is a third backend of `scripts/jev-systemone.py`, selected by the order below.
+
 The typed-decision path used by the skills is:
 
 ```text
