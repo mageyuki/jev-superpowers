@@ -32,9 +32,7 @@ python3 scripts/jev-systemone.py --check-backend
 Use the checkout's absolute script path when working in another project. Installing
 skills does not copy the client; keep the checkout available. Missing client: STOP.
 The preflight prints only a backend name, never credentials, and makes no HTTP call.
-`JEV_BACKEND=opencode-zen|typesafe|laya` wins; otherwise a non-empty
-`OPENCODE_API_KEY` or stored OpenCode Console credential selects `opencode-zen`,
-then the existing TypeSafe/Laya environment rules apply.
+`JEV_BACKEND=opencode-zen|typesafe|laya` wins. Otherwise `TYPESAFE_BASE_URL` or `TYPESAFE_BACKEND=laya` selects local Laya without consulting the Console credential. Otherwise a non-empty `OPENCODE_API_KEY` or stored OpenCode Console credential selects `opencode-zen`. Otherwise the existing TypeSafe rules apply.
 
 For **OpenCode Zen**, Python 3 and a resolved Console key are valid prerequisites;
 no second TypeSafe key is needed. Run `python3 scripts/jev-systemone.py`
