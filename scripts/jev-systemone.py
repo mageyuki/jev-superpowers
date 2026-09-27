@@ -115,7 +115,7 @@ def finite_number(value):
 
 
 def request_answer(args, config):
-    _, key, endpoint, model = config
+    backend, key, endpoint, model = config
     question = {"type": "choice" if args.command == "pick" else args.command,
                 "instructions": args.question}
     if args.command == "pick":
@@ -135,7 +135,7 @@ def request_answer(args, config):
     field = "choice" if args.command == "pick" else args.command
     if not isinstance(answer, dict) or answer.get(field) is None:
         raise AnswerError("Missing answer")
-    if answer.get("type") != field:
+    if answer.get("type") != field and not (backend == "laya" and "type" not in answer):
         raise AnswerError("Invalid answer")
     value = answer[field]
     if args.command == "pick":
@@ -150,7 +150,7 @@ def request_answer(args, config):
         raise AnswerError("Invalid answer")
     # Keep all raw fields (especially score vs confidence); never map confidence.
     output = json.dumps(answer, ensure_ascii=False)
-    if key in output or json.dumps(key, ensure_ascii=False)[1:-1] in output:
+    if len(key) >= 16 and key != "local" and (key in output or json.dumps(key, ensure_ascii=False)[1:-1] in output):
         raise AnswerError("Unsafe answer")
     return output
 

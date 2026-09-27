@@ -11,6 +11,8 @@ case "${JEV_BACKEND:-}" in
     "")
         if [ -n "${TYPESAFE_BASE_URL:-}" ] || [ "${TYPESAFE_BACKEND:-}" = "laya" ]; then
             BACKEND=laya
+        elif command -v python3 >/dev/null 2>&1; then
+            BACKEND=""
         elif [ -n "${TYPESAFE_API_KEY:-}" ]; then
             BACKEND=typesafe
         else

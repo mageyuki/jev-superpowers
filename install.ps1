@@ -11,18 +11,22 @@ if ($backend -and $backend -notin @("typesafe", "laya", "opencode-zen")) {
     Write-Error "Invalid JEV_BACKEND"
     exit 1
 }
+$python = $null
 if (!$backend -and ($env:TYPESAFE_BASE_URL -or $env:TYPESAFE_BACKEND -eq "laya")) {
     $backend = "laya"
-} elseif (!$backend -and $env:TYPESAFE_API_KEY) {
-    $backend = "typesafe"
+} elseif (!$backend) {
+    $python = Get-Command python3 -ErrorAction SilentlyContinue
+    if (!$python -and $env:TYPESAFE_API_KEY) { $backend = "typesafe" }
 }
 if ($backend -eq "typesafe" -and !$env:TYPESAFE_API_KEY) {
     Write-Error "Missing TypeSafe credential; configure TypeSafe, OpenCode Zen, or Laya"
     exit 1
 }
 if (!$backend -or $backend -eq "opencode-zen") {
-    $python = Get-Command python3 -ErrorAction SilentlyContinue
-    if (!$python) { $python = Get-Command python -ErrorAction SilentlyContinue }
+    if ($backend -eq "opencode-zen" -and !$python) {
+        $python = Get-Command python3 -ErrorAction SilentlyContinue
+        if (!$python) { $python = Get-Command python -ErrorAction SilentlyContinue }
+    }
     if (!$python) {
         Write-Error "Python 3 is required for System One backend configuration."
         exit 1

@@ -52,11 +52,12 @@ class IsolatedCase(unittest.TestCase):
     def store(self, key=TOKEN, integration="opencode", value=None, path=None):
         path = path or Path(self.env["JEV_OPENCODE_DB"])
         path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(path) as db:
-            db.execute("CREATE TABLE credential (integration_id TEXT, value TEXT)")
-            db.execute("INSERT INTO credential VALUES (?, ?)", (
-                integration, value if value is not None else json.dumps({"type": "api", "key": key}),
-            ))
+        with contextlib.closing(sqlite3.connect(path)) as db:
+            with db:
+                db.execute("CREATE TABLE credential (integration_id TEXT, value TEXT)")
+                db.execute("INSERT INTO credential VALUES (?, ?)", (
+                    integration, value if value is not None else json.dumps({"type": "api", "key": key}),
+                ))
         return path
 
     def run_client(self, *args):
@@ -199,6 +200,30 @@ class TransportTests(IsolatedCase):
                 self.assertEqual(code, 1)
                 self.assertEqual(out, "")
                 self.assertEqual(err, "Invalid answer\n")
+
+    def test_legacy_laya_answer_without_type_still_validates_value(self):
+        self.env.pop("OPENCODE_API_KEY")
+        self.env["JEV_BACKEND"] = "laya"
+        self.env["TYPESAFE_BASE_URL"] = f"http://127.0.0.1:{self.server.server_port}"
+        self.answer = {"noul": 0.72}
+        code, out, err = self.invoke("noul", "--question", "Q", "--state", "Synthetic")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out), {"noul": 0.72})
+        self.answer = {"noul": 1.5}
+        code, out, err = self.invoke("noul", "--question", "Q", "--state", "Synthetic")
+        self.assertEqual((code, out, err), (1, "", "Invalid answer\n"))
+        self.answer = {"type": "score", "noul": 0.72}
+        code, out, err = self.invoke("noul", "--question", "Q", "--state", "Synthetic")
+        self.assertEqual((code, out, err), (1, "", "Invalid answer\n"))
+
+    def test_laya_local_choice_is_not_mistaken_for_credential_echo(self):
+        self.env.pop("OPENCODE_API_KEY")
+        self.env["JEV_BACKEND"] = "laya"
+        self.env["TYPESAFE_BASE_URL"] = f"http://127.0.0.1:{self.server.server_port}"
+        self.answer = {"type": "choice", "choice": "local", "confidence": 0.9}
+        code, out, err = self.invoke("pick", "--question", "Q", "--options", "local,remote", "--state", "Synthetic")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out), self.answer)
 
     def test_pick_rejects_invalid_present_confidence(self):
         for confidence in ("high", -0.1, 1.1, float("nan"), float("inf"), True):
@@ -380,9 +405,9 @@ class InstallerTests(IsolatedCase):
         for tool in ("jev-scout", "jev-axi", "git", "jev-guard", "supercov", "limpet", "jev-seo"):
             self.tool(tool, "exit 0")
         if filename.endswith(".ps1"):
-            command = ["pwsh", "-NoProfile", "-File", str(ROOT / filename)]
+            command = [shutil.which("pwsh"), "-NoProfile", "-File", str(ROOT / filename)]
         else:
-            command = ["bash", str(ROOT / filename)]
+            command = [shutil.which("bash"), str(ROOT / filename)]
         return subprocess.run(command, env=self.env, capture_output=True, text=True, timeout=20)
 
     def check_no_key(self, filename):
@@ -404,12 +429,21 @@ class InstallerTests(IsolatedCase):
             self.env["JEV_BACKEND"] = "typesafe"
         for name in ("python", "python3"):
             (self.bin / name).unlink()
-            self.tool(name, f'printf "%s\\n" invoked >> "{self.home / "python-calls"}"; exit 73')
+        for name in ("cp", "ls", "mkdir", "dirname"):
+            (self.bin / name).symlink_to(shutil.which(name))
+        self.env["PATH"] = str(self.bin)
         result = self.installer(filename)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("typesafe", result.stdout.lower())
         self.assertTrue((self.home / ".agents/skills/jev-using-superpowers/SKILL.md").is_file())
-        self.assertFalse((self.home / "python-calls").exists(), "Legacy installation must not invoke Python")
+        self.assert_no_key(result.stdout, result.stderr)
+
+    def check_python_preflight_precedes_implicit_typesafe(self, filename):
+        self.env.update(OPENCODE_API_KEY=TOKEN, TYPESAFE_API_KEY="synthetic-typesafe-key")
+        result = self.installer(filename)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("System One backend configured: opencode-zen", result.stdout)
+        self.assertTrue((self.home / ".agents/skills/jev-using-superpowers/SKILL.md").is_file())
         self.assert_no_key(result.stdout, result.stderr)
 
     def test_bash_no_key_has_no_install_side_effect(self):
@@ -423,6 +457,9 @@ class InstallerTests(IsolatedCase):
 
     def test_bash_implicit_typesafe_installs_without_python(self):
         self.check_typesafe_without_python("install.sh", explicit=False)
+
+    def test_bash_implicit_backend_uses_python_preflight(self):
+        self.check_python_preflight_precedes_implicit_typesafe("install.sh")
 
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
     def test_powershell_no_key_has_no_install_side_effect(self):
@@ -439,6 +476,30 @@ class InstallerTests(IsolatedCase):
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
     def test_powershell_implicit_typesafe_installs_without_python(self):
         self.check_typesafe_without_python("install.ps1", explicit=False)
+
+    @unittest.skipUnless(shutil.which("pwsh"), "PowerShell runtime unavailable")
+    def test_powershell_implicit_backend_uses_python_preflight(self):
+        self.check_python_preflight_precedes_implicit_typesafe("install.ps1")
+
+
+class LayaServerTests(unittest.TestCase):
+    def test_server_emits_answer_type(self):
+        spec = importlib.util.spec_from_file_location("serve_laya", ROOT / "scripts/serve-laya.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        server = HTTPServer(("127.0.0.1", 0), module.SystemOneHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(thread.join)
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        payload = {"state": "Synthetic", "questions": {"decision": {"type": "noul", "instructions": "clear"}}}
+        request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}/v1/systemone",
+                                         data=json.dumps(payload).encode(), method="POST")
+        with urllib.request.urlopen(request) as response:
+            answer = json.load(response)["answers"]["decision"]
+        self.assertEqual(answer["type"], "noul")
+        self.assertIsInstance(answer["noul"], float)
 
 
 if __name__ == "__main__":
