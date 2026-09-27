@@ -99,7 +99,18 @@ Run-Check -Description 'session-start injects Jev router' -Condition {
 Run-Check -Description 'installer fails without key' -Condition {
     $installSh = (Join-Path $baseDir 'install.sh') -replace '\\', '/'
     if (Get-Command bash -ErrorAction SilentlyContinue) {
-        $out = bash -c "env -u TYPESAFE_API_KEY -u TYPESAFE_BASE_URL bash '$installSh'" 2>&1
+        # A private HOME and explicit empty store prevent using connected credentials.
+        $isolatedInstall = @'
+test_home=$(mktemp -d)
+trap 'rm -rf "$test_home"' EXIT
+python_bin=$(python3 -c 'import sys; print(sys.executable)')
+mkdir -p "$test_home/bin"
+ln -s "$python_bin" "$test_home/bin/python3"
+env -u OPENCODE_API_KEY -u JEV_BACKEND -u TYPESAFE_BASE_URL -u TYPESAFE_BACKEND \
+    HOME="$test_home" XDG_DATA_HOME="$test_home/data" TYPESAFE_API_KEY= \
+    JEV_OPENCODE_DB="$test_home/empty.db" PATH="$test_home/bin:$PATH" bash "$1"
+'@
+        $out = bash -c $isolatedInstall _ $installSh 2>&1
         return ($LASTEXITCODE -ne 0)
     }
     return $true

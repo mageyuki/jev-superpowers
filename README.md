@@ -133,11 +133,31 @@ cd jev-superpowers
 
 ### Step 2: Choose Decision Backend
 
+#### OpenCode Zen: reuse your connected Console key
+
+With Python 3 installed, run from this checkout:
+
+```bash
+export JEV_BACKEND=opencode-zen
+bash install.sh
+python3 scripts/jev-systemone.py pick --question "Which backend is connected?" \
+  --options "opencode-zen,typesafe,laya" --state "OpenCode Console is connected."
+```
+
+Zen resolves `OPENCODE_API_KEY` or the stored OpenCode Console credential without
+printing it or requesting a second TypeSafe key. It defaults to `jev-1.13-free`
+(`JEV_MODEL` overrides). Explicit `JEV_BACKEND` wins; otherwise Zen is selected
+when its credential resolves, then the existing TypeSafe/Laya rules apply.
+Zen supplies typed decisions only, **not** `jev-scout` registry searches or
+`git jev check`. Keep this checkout for the client. See the
+[OpenCode Zen guide](docs/OPENCODE_ZEN.md) for commands, credential paths, and limits.
+
 #### Option A: Cloud Backend (TypeSafe AI)
 
 ```bash
 # 1. Export your free API key from https://console.typesafe.ai
 export TYPESAFE_API_KEY="your_api_key"
+export JEV_BACKEND=typesafe
 
 # 2. Run cross-platform installer
 bash install.sh
@@ -155,6 +175,7 @@ python scripts/serve-laya.py --port 8000 &
 # 3. Export local routing (Zero cloud tokens, 100% air-gapped)
 export TYPESAFE_BASE_URL="http://127.0.0.1:8000"
 export TYPESAFE_API_KEY="local"
+export JEV_BACKEND=laya
 
 # 4. Run installer
 bash install.sh
@@ -192,6 +213,7 @@ Run the offline test suite (`bash scripts/test.sh` or `pwsh scripts/test.ps1`):
   ✔ pre-commit ignores plain ls
   ✔ session-start injects Jev router
   ✔ installer fails without key
+  ✔ System One client and installer contracts
   ✔ jev-using-superpowers documents failure modes
   ✔ jev-brainstorming documents failure modes
   ✔ jev-writing-plans documents failure modes
@@ -203,7 +225,7 @@ Run the offline test suite (`bash scripts/test.sh` or `pwsh scripts/test.ps1`):
   ✔ serve-laya syntax valid
   ✔ README avoids absolute claims
 
-Test results: 24 passed, 0 failed.
+Test results: 25 passed, 0 failed.
 ```
 
 ---

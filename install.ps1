@@ -3,12 +3,30 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "⚡ Installing jev-superpowers..." -ForegroundColor Cyan
 
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# Shared preflight checks credentials without HTTP or printing their values.
+# Validate before creating directories or copying any skills.
+$python = Get-Command python3 -ErrorAction SilentlyContinue
+if (!$python) { $python = Get-Command python -ErrorAction SilentlyContinue }
+if (!$python) {
+    Write-Error "Python 3 is required for System One backend configuration."
+    exit 1
+}
+$backend = & $python.Source (Join-Path $scriptDir "scripts/jev-systemone.py") --check-backend
+if ($LASTEXITCODE -ne 0) { exit 1 }
+Write-Host "✔ System One backend configured: $backend" -ForegroundColor Green
+if ($backend -eq "laya" -and !$env:TYPESAFE_API_KEY) {
+    $env:TYPESAFE_API_KEY = "local"
+} elseif ($backend -eq "opencode-zen") {
+    Write-Host "  Typed decisions: python3 $scriptDir/scripts/jev-systemone.py"
+    Write-Host "  Zen does not replace jev-scout registry searches or git jev check."
+}
+
 $targetDir = Join-Path $HOME ".agents\skills"
 if (!(Test-Path $targetDir)) {
     New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 }
-
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Copy skills
 Get-ChildItem (Join-Path $scriptDir "skills") | ForEach-Object {
@@ -56,23 +74,6 @@ if ($limpetInstalled) {
     $missing++
 }
 Check-Tool "jev-seo" "cargo install jev-seo"
-
-$hasLocal = [bool]($env:TYPESAFE_BASE_URL -or ($env:TYPESAFE_BACKEND -eq "laya"))
-if (!$env:TYPESAFE_API_KEY -and !$hasLocal) {
-    Write-Host "`n❌ Neither TYPESAFE_API_KEY nor local FOSS backend is configured." -ForegroundColor Red
-    Write-Host "  Cloud: Get your free API key at https://console.typesafe.ai"
-    Write-Host "  Local FOSS: Run Laya via 'python scripts/serve-laya.py' and set:"
-    Write-Host "    `$env:TYPESAFE_BASE_URL = 'http://127.0.0.1:8000'"
-    Write-Host "    `$env:TYPESAFE_API_KEY = 'local'"
-    $missing++
-} elseif ($hasLocal) {
-    Write-Host "`n✔ Local FOSS System 1 backend configured ($($env:TYPESAFE_BASE_URL) / Laya)." -ForegroundColor Green
-    if (!$env:TYPESAFE_API_KEY) {
-        $env:TYPESAFE_API_KEY = "local"
-    }
-} else {
-    Write-Host "`n✔ TYPESAFE_API_KEY is configured." -ForegroundColor Green
-}
 
 if ($missing -gt 0) {
     Write-Host "`n⚠️  Skills installed successfully, but $missing prerequisite tool(s) were not detected." -ForegroundColor Yellow

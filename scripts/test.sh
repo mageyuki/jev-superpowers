@@ -66,8 +66,20 @@ check "stop gate executable" test -x "${ROOT_DIR}/hooks/stop"
 check "pre-commit ignores plain ls" bash -c "echo '{\"tool_input\":{\"command\":\"ls -la\"}}' | bash ${ROOT_DIR}/hooks/pre-commit"
 check "session-start injects Jev router" grep -q "jev-using-superpowers/SKILL.md" "${ROOT_DIR}/hooks/session-start"
 
-# Installer fails loud without key (expect nonzero)
-check "installer fails without key" bash -c "! TYPESAFE_API_KEY= bash ${ROOT_DIR}/install.sh"
+# Installer failure is hermetic even on a machine connected to OpenCode Console.
+installer_without_key() (
+    test_home=$(mktemp -d "${ROOT_DIR}/.jev-installer.XXXXXX")
+    trap 'rm -rf "$test_home"' EXIT
+    python_bin=$(python3 -c 'import sys; print(sys.executable)')
+    mkdir -p "$test_home/bin"
+    ln -s "$python_bin" "$test_home/bin/python3"
+    ! env -u OPENCODE_API_KEY -u JEV_BACKEND -u TYPESAFE_BASE_URL -u TYPESAFE_BACKEND \
+        HOME="$test_home" XDG_DATA_HOME="$test_home/data" TYPESAFE_API_KEY= \
+        JEV_OPENCODE_DB="$test_home/empty.db" PATH="$test_home/bin:$PATH" \
+        bash "${ROOT_DIR}/install.sh"
+)
+check "installer fails without key" installer_without_key
+check "System One client and installer contracts" python3 "${ROOT_DIR}/scripts/test-systemone.py"
 
 # Every jev skill documents failure modes + confidence policy exists
 for skill in "${JEV_SKILLS[@]}"; do

@@ -69,6 +69,10 @@ Traditional coding agents operate exclusively in System 2: generating long token
 
 The framework isolates decision consumers (`git-jev`, `limpet`, `jev-axi`, `jev-guard`) from the concrete backend via the System One protocol (`POST /v1/systemone`).
 
+The in-repo `scripts/jev-systemone.py` additionally supports OpenCode Zen for
+typed decisions. This does **not** change the backend support or configuration
+of external utilities, registry search (`jev-scout`), or `git jev check`.
+
 ```
                     ┌──────────────────────────────────────┐
                     │ Client Utilities (git-jev, limpet)   │
@@ -84,6 +88,28 @@ The framework isolates decision consumers (`git-jev`, `limpet`, `jev-axi`, `jev-
       • Cloud managed                             • 100% Air-gapped / Local RAM
       • Auth: TYPESAFE_API_KEY                    • Auth: Dummy / Keyless
 ```
+
+The typed-decision path used by the skills is:
+
+```text
+jev-brainstorming / jev-systematic-debugging
+                     |
+        python3 scripts/jev-systemone.py
+                     |
+  explicit JEV_BACKEND > resolved Console key > TypeSafe/Laya rules
+          /                  |                   \
+   opencode-zen           typesafe               laya
+   opencode.ai/zen/v1      api.typesafe.ai/v1      local /v1
+   POST /systemone        POST /systemone        POST /systemone
+   jev-1.13-free           existing TypeSafe      existing local bridge
+   Console Bearer key     TYPESAFE_API_KEY       local key
+   non-empty User-Agent
+```
+
+Zen credential resolution is env first, then read-only OpenCode SQLite; both
+installers share the client's non-network preflight before copying skills.
+`JEV_MODEL` overrides the model. Answers retain their raw fields without a second
+confidence mapping. See [OpenCode Zen](OPENCODE_ZEN.md) for exact path precedence.
 
 ### Transport Payload Schema
 ```json
